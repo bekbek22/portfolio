@@ -1,0 +1,26 @@
+{
+  "name": "portfolio-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "bun --bun prisma generate",
+    "db:migrate": "bun --bun prisma migrate dev",
+    "db:deploy": "bun --bun prisma migrate deploy",
+    "db:studio": "bun --bun prisma studio"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "elysia": "1.4.30",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "prisma": "7.10.1",
+    "typescript": "^5"
+  }
+}

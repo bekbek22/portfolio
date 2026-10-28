@@ -6,14 +6,35 @@ on:
   pull_request:
 
 jobs:
-  check:
+  server:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - run: bun run typecheck
+      - run: docker build -t portfolio-server .
+
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck

@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Projects ────────────────────────────────────────────────────────────────
+
+model Project {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  title      String
+  summary    String   @db.VarChar(160)
+  body       String // markdown
+  coverImage String?
+  repoUrl    String?
+  liveUrl    String?
+  featured   Boolean  @default(false)
+  published  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  tags       Tag[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([published, featured, sortOrder])
+}
+
+enum TagCategory {
+  LANGUAGE
+  FRAMEWORK
+  TOOL
+  DOMAIN
+}
+
+model Tag {
+  id       String      @id @default(cuid())
+  slug     String      @unique
+  name     String
+  category TagCategory
+  projects Project[]
+}
+
+// ─── Guestbook ───────────────────────────────────────────────────────────────
+
+enum GuestbookStatus {
+  VISIBLE
+  HIDDEN
+}
+
+model GuestbookEntry {
+  id          String          @id @default(cuid())
+  authorId    String // GitHub user id
+  authorName  String
+  authorImage String?
+  message     String          @db.VarChar(280)
+  status      GuestbookStatus @default(VISIBLE)
+  createdAt   DateTime        @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([authorId])
+}
+
+// ─── Contact ─────────────────────────────────────────────────────────────────
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String    @db.VarChar(80)
+  email     String
+  message   String    @db.VarChar(2000)
+  ipHash    String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
+
+// ─── Analytics ───────────────────────────────────────────────────────────────
+
+enum EventType {
+  PAGE_VIEW
+  PROJECT_CLICK
+  RESUME_DOWNLOAD
+  OUTBOUND_CLICK
+}
+
+enum Device {
+  DESKTOP
+  MOBILE
+  TABLET
+}
+
+model AnalyticsEvent {
+  id          BigInt    @id @default(autoincrement())
+  type        EventType
+  path        String    @db.VarChar(200)
+  target      String?   @db.VarChar(200) // project slug or outbound URL
+  referrer    String? // host only
+  device      Device
+  country     String?   @db.VarChar(2)
+  visitorHash String // sha256(ip + ua + dailySalt); not linkable across days
+  createdAt   DateTime  @default(now())
+
+  @@index([type, createdAt])
+  @@index([path, createdAt])
+}
