@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 export const healthRoutes = new Elysia({ prefix: "/health" }).get("/", async ({ set }) => {
   try {

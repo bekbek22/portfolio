@@ -1,6 +1,6 @@
-import { app } from "@/app";
-import { env } from "@/config/env";
-import { prisma } from "@/lib/prisma";
+import { app } from "./app";
+import { env } from "./config/env";
+import { prisma } from "./lib/prisma";
 
 app.listen(env.PORT);
 console.log(`API listening on http://localhost:${env.PORT}/api/v1`);

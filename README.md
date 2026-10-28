@@ -10,15 +10,17 @@ Decoupled full-stack portfolio.
 ## Local development
 
 ```bash
-docker compose up -d                 # Postgres on localhost:5433
+bun install                          # installs client + server (Bun workspace)
+docker compose up -d                 # Postgres on 127.0.0.1:5433
 
 cd server
 cp .env.example .env
-bun install
 bun run db:migrate                   # apply migrations + generate client
 bun run dev                          # http://localhost:4000/api/v1/health
+bun test
 
 cd ../client
-npm install
-npm run dev                          # http://localhost:3000
+bun run dev                          # http://localhost:3000
 ```
+
+Server image (build from the repo root): `docker build -f server/Dockerfile -t portfolio-server .`

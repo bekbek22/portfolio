@@ -1,0 +1,4 @@
+generated
+bun.lock
+prisma/migrations
+dist
