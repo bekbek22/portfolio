@@ -1,0 +1,234 @@
+openapi: 3.0.3
+info:
+  title: Portfolio API
+  version: 1.0.0
+  description: |
+    Public API for the portfolio site.
+
+    Every error response uses the `Error` envelope. Validation failures return 422 with
+    per-field messages in `fieldErrors`; malformed requests return 400.
+servers:
+  - url: /api/v1
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness and database connectivity
+      tags: [system]
+      responses:
+        "200":
+          description: Server and database are up
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+        "503":
+          description: Database is unreachable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List published projects
+      description: Projects matching ALL given tags (intersection), optionally searched and filtered by `featured`.
+      tags: [projects]
+      parameters:
+        - name: tag
+          in: query
+          description: Tag slug; repeat to require several tags (`?tag=go&tag=postgresql`).
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 10
+            items: { $ref: "#/components/schemas/Slug" }
+        - name: q
+          in: query
+          description: Case-insensitive search in title and summary.
+          schema: { type: string, minLength: 1, maxLength: 50 }
+        - name: featured
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Matching projects in display order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ProjectCard" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /projects/{slug}:
+    get:
+      operationId: getProject
+      summary: Get a published project
+      tags: [projects]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/Slug" }
+      responses:
+        "200":
+          description: The project
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/ProjectDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tags:
+    get:
+      operationId: listTags
+      summary: Tags used by at least one published project
+      tags: [projects]
+      responses:
+        "200":
+          description: Tags ordered by category, then name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/TagWithCount" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  schemas:
+    Slug:
+      type: string
+      pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+      maxLength: 100
+      example: go-microservice
+
+    Health:
+      type: object
+      required: [status, db]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        db: { type: string, enum: [up, down] }
+
+    TagCategory:
+      type: string
+      enum: [language, framework, tool, domain]
+
+    Tag:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: { $ref: "#/components/schemas/Slug" }
+        name: { type: string }
+
+    TagWithCount:
+      type: object
+      required: [slug, name, category, projectCount]
+      properties:
+        slug: { $ref: "#/components/schemas/Slug" }
+        name: { type: string }
+        category: { $ref: "#/components/schemas/TagCategory" }
+        projectCount: { type: integer, minimum: 1 }
+
+    ProjectCard:
+      type: object
+      required: [slug, title, summary, coverImageUrl, featured, tags]
+      properties:
+        slug: { $ref: "#/components/schemas/Slug" }
+        title: { type: string }
+        summary: { type: string, maxLength: 160 }
+        coverImageUrl: { type: string, nullable: true }
+        featured: { type: boolean }
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/Tag" }
+
+    ProjectDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProjectCard"
+        - type: object
+          required: [body, repoUrl, liveUrl, updatedAt]
+          properties:
+            body: { type: string, description: Markdown }
+            repoUrl: { type: string, nullable: true }
+            liveUrl: { type: string, nullable: true }
+            updatedAt: { type: string, format: date-time }
+
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION
+        - NOT_FOUND
+        - METHOD_NOT_ALLOWED
+        - RATE_LIMITED
+        - NOT_IMPLEMENTED
+        - INTERNAL
+      x-enum-varnames: # Go constant names (oapi-codegen)
+        - Validation
+        - NotFound
+        - MethodNotAllowed
+        - RateLimited
+        - NotImplemented
+        - Internal
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { $ref: "#/components/schemas/ErrorDetail" }
+
+    ErrorDetail:
+      type: object
+      required: [code, message]
+      properties:
+        code: { $ref: "#/components/schemas/ErrorCode" }
+        message: { type: string }
+        fieldErrors:
+          type: object
+          description: Messages per invalid field (query/path parameter or body field).
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+  responses:
+    ValidationFailed:
+      description: One or more parameters are invalid
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          description: Seconds until the client may retry
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

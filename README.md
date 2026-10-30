@@ -30,6 +30,12 @@ bun run dev                          # http://localhost:3000
 | `go run ./cmd/api migrate down [n]`       | roll back `n` migrations (default 1)                    |
 | `go run ./cmd/api migrate version`        | show the current schema version                         |
 | `sqlc generate`                           | regenerate `internal/database/sqlc` from `queries/*.sql` |
+| `go generate ./...`                       | regenerate the Fiber strict server from `api/openapi.yaml` |
+
+**API contract.** `server/api/openapi.yaml` is the source of truth (spec-first). The Go
+server interface (`internal/httpapi/gen`) and the client types (`client/src/lib/api/schema.d.ts`,
+`bun run gen:api`) are generated from it and committed; CI fails if either is stale. The live
+spec is served at `GET /api/v1/openapi.json`.
 
 **Tests.** Unit tests need nothing. Database integration tests use `TEST_DATABASE_URL`
 and run each test in its own rolled-back transaction:

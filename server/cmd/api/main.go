@@ -83,7 +83,12 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 	}
 	defer pool.Close()
 
-	app := httpapi.New(httpapi.Deps{DB: pool})
+	httpCfg := httpapi.DefaultConfig()
+	httpCfg.TrustedProxyHops = cfg.TrustedProxyHops
+	app, err := httpapi.New(httpapi.Deps{DB: pool, Logger: log}, httpCfg)
+	if err != nil {
+		return err
+	}
 
 	listenErr := make(chan error, 1)
 	go func() {

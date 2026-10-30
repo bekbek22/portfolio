@@ -1,0 +1,15 @@
+# Used by `go generate ./...` (see internal/httpapi/gen/generate.go). Paths are
+# relative to that package directory.
+package: gen
+output: api.gen.go
+generate:
+  models: true
+  fiber-v3-server: true
+  strict-server: true
+  embedded-spec: true
+output-options:
+  # Go initialisms: CoverImageURL, HealthDB, ...
+  name-normalizer: ToCamelCaseWithInitialisms
+compatibility:
+  # ErrorCodeNotFound instead of NOTFOUND
+  always-prefix-enum-values: true

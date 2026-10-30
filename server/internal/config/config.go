@@ -18,6 +18,9 @@ type Config struct {
 	Env         Env
 	Port        int
 	DatabaseURL string
+	// TrustedProxyHops is the number of reverse proxies in front of the server
+	// (0 = use the socket address as the client IP).
+	TrustedProxyHops int
 }
 
 // Load reads configuration through getenv (os.Getenv in production, a map in tests)
@@ -45,6 +48,14 @@ func Load(getenv func(string) string) (Config, error) {
 	cfg.DatabaseURL = getenv("DATABASE_URL")
 	if cfg.DatabaseURL == "" {
 		errs = append(errs, errors.New("DATABASE_URL: required"))
+	}
+
+	if raw := getenv("TRUSTED_PROXY_HOPS"); raw != "" {
+		hops, err := strconv.Atoi(raw)
+		if err != nil || hops < 0 {
+			errs = append(errs, fmt.Errorf("TRUSTED_PROXY_HOPS: must be >= 0, got %q", raw))
+		}
+		cfg.TrustedProxyHops = hops
 	}
 
 	if err := errors.Join(errs...); err != nil {

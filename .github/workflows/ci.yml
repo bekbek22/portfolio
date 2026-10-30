@@ -44,6 +44,10 @@ jobs:
           go run ./cmd/api migrate up
           go run ./cmd/api migrate down 1
           go run ./cmd/api migrate up
+      - name: OpenAPI server code is up to date
+        run: |
+          go generate ./...
+          git diff --exit-code -- internal/httpapi/gen
       - name: gofmt
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
       - run: go vet ./...
@@ -61,6 +65,10 @@ jobs:
         with:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile
+      - name: OpenAPI client types are up to date
+        run: |
+          bun run gen:api
+          git diff --exit-code -- src/lib/api/schema.d.ts
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run format:check

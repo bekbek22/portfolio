@@ -23,8 +23,8 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name: "explicit values",
-			env:  map[string]string{"APP_ENV": "production", "PORT": "8080", "DATABASE_URL": dbURL},
-			want: Config{Env: EnvProduction, Port: 8080, DatabaseURL: dbURL},
+			env:  map[string]string{"APP_ENV": "production", "PORT": "8080", "DATABASE_URL": dbURL, "TRUSTED_PROXY_HOPS": "2"},
+			want: Config{Env: EnvProduction, Port: 8080, DatabaseURL: dbURL, TrustedProxyHops: 2},
 		},
 		{
 			name:    "missing database url",
@@ -33,8 +33,8 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name:    "reports every invalid value",
-			env:     map[string]string{"APP_ENV": "staging", "PORT": "99999"},
-			wantErr: []string{"APP_ENV", "PORT", "DATABASE_URL"},
+			env:     map[string]string{"APP_ENV": "staging", "PORT": "99999", "TRUSTED_PROXY_HOPS": "-1"},
+			wantErr: []string{"APP_ENV", "PORT", "DATABASE_URL", "TRUSTED_PROXY_HOPS"},
 		},
 		{
 			name:    "non-numeric port",
