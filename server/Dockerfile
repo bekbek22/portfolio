@@ -1,31 +1,27 @@
 # syntax=docker/dockerfile:1
-# Build from the repo root (the Bun workspace lockfile lives there):
-#   docker build -f server/Dockerfile -t portfolio-server .
-# Migrations are not run by this image; apply them from CI/deploy with `bun run db:deploy`.
+# Build from server/:  docker build -t portfolio-server server
 
-# ── build: install, generate the Prisma client, bundle to a single file ───────
-FROM oven/bun:1.4-slim AS build
-WORKDIR /app
-COPY package.json bun.lock ./
-COPY server/package.json server/
-COPY client/package.json client/
-RUN bun install --frozen-lockfile --filter portfolio-server
+# ── build: static binary, no cgo ──────────────────────────────────────────────
+FROM golang:1.27.3-alpine AS build
+WORKDIR /src
 
-COPY server ./server
-WORKDIR /app/server
-# `prisma generate` doesn't connect to the DB, but the config requires the var to exist.
-RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" bun --bun prisma generate \
- && bun run build
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-# ── runtime: just Bun + the bundle (no node_modules) ──────────────────────────
-FROM oven/bun:1.4-slim AS runtime
-WORKDIR /app
-ENV NODE_ENV=production PORT=4000
-COPY --from=build --chown=bun:bun /app/server/dist ./dist
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 
-USER bun
+# ── runtime: distroless (no shell, no package manager), non-root ──────────────
+FROM gcr.io/distroless/static-debian13:nonroot
+COPY --from=build /out/api /api
+
+ENV APP_ENV=production PORT=4000
 EXPOSE 4000
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD ["bun", "-e", "fetch('http://localhost:' + process.env.PORT + '/api/v1/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+USER nonroot:nonroot
 
-CMD ["bun", "dist/index.js"]
+# No shell or curl in distroless: the binary checks itself.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD ["/api", "healthcheck"]
+
+ENTRYPOINT ["/api"]
+CMD ["serve"]
