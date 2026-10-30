@@ -116,7 +116,7 @@ export interface components {
             updatedAt: string;
         };
         /** @enum {string} */
-        ErrorCode: "VALIDATION" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "RATE_LIMITED" | "NOT_IMPLEMENTED" | "INTERNAL";
+        ErrorCode: "VALIDATION" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "RATE_LIMITED" | "INTERNAL";
         Error: {
             error: components["schemas"]["ErrorDetail"];
         };

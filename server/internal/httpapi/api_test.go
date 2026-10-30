@@ -14,7 +14,7 @@ import (
 
 func TestRequestValidation(t *testing.T) {
 	t.Parallel()
-	app := newTestApp(t, healthyDB, DefaultConfig())
+	app := newTestApp(t, DefaultConfig(), Deps{})
 
 	tests := []struct {
 		name         string
@@ -23,10 +23,10 @@ func TestRequestValidation(t *testing.T) {
 		wantFields   []string // keys expected in fieldErrors (422 only)
 		wantContains string   // substring expected in one of the field messages
 	}{
-		// Valid requests reach the handler, which is a 501 placeholder until G3.
-		{name: "no params", target: "/api/v1/projects", wantStatus: http.StatusNotImplemented},
-		{name: "all params valid", target: "/api/v1/projects?tag=go&tag=postgresql&q=api&featured=true", wantStatus: http.StatusNotImplemented},
-		{name: "valid slug", target: "/api/v1/projects/go-microservice", wantStatus: http.StatusNotImplemented},
+		// Valid requests reach the handler (fake service: empty list, unknown slug).
+		{name: "no params", target: "/api/v1/projects", wantStatus: http.StatusOK},
+		{name: "all params valid", target: "/api/v1/projects?tag=go&tag=postgresql&q=api&featured=true", wantStatus: http.StatusOK},
+		{name: "valid slug", target: "/api/v1/projects/go-microservice", wantStatus: http.StatusNotFound},
 
 		{name: "tag not a slug", target: "/api/v1/projects?tag=Not_Valid", wantStatus: http.StatusUnprocessableEntity, wantFields: []string{"tag"}},
 		{name: "too many tags", target: "/api/v1/projects?" + strings.Repeat("tag=a&", 11), wantStatus: http.StatusUnprocessableEntity, wantFields: []string{"tag"}},
@@ -70,7 +70,7 @@ func TestRequestValidation(t *testing.T) {
 
 func TestErrorEnvelope(t *testing.T) {
 	t.Parallel()
-	app := newTestApp(t, healthyDB, DefaultConfig())
+	app := newTestApp(t, DefaultConfig(), Deps{})
 	app.Get("/api/v1/test-panic", func(fiber.Ctx) error { panic("secret internals") })
 
 	tests := []struct {
@@ -84,7 +84,6 @@ func TestErrorEnvelope(t *testing.T) {
 		{"unknown route under prefix", http.MethodGet, "/api/v1/nope", http.StatusNotFound, gen.ErrorCodeNotFound, "Route not found"},
 		{"unknown route outside prefix", http.MethodGet, "/", http.StatusNotFound, gen.ErrorCodeNotFound, "Route not found"},
 		{"wrong method", http.MethodPost, "/api/v1/projects", http.StatusMethodNotAllowed, gen.ErrorCodeMethodNotAllowed, "Method not allowed"},
-		{"not implemented yet", http.MethodGet, "/api/v1/tags", http.StatusNotImplemented, gen.ErrorCodeNotImplemented, "Not implemented yet"},
 		{"panic does not leak", http.MethodGet, "/api/v1/test-panic", http.StatusInternalServerError, gen.ErrorCodeInternal, "Internal server error"},
 	}
 
@@ -112,7 +111,7 @@ func TestRateLimit(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
 	cfg.RateLimitMax = 2
-	app := newTestApp(t, healthyDB, cfg)
+	app := newTestApp(t, cfg, Deps{})
 
 	for i := range 2 {
 		if res := do(t, app, http.MethodGet, "/api/v1/projects", nil); res.StatusCode == http.StatusTooManyRequests {
@@ -140,7 +139,7 @@ func TestRateLimit(t *testing.T) {
 	other := http.Header{"X-Forwarded-For": {"203.0.113.9"}}
 	cfgProxy := cfg
 	cfgProxy.TrustedProxyHops = 1
-	proxied := newTestApp(t, healthyDB, cfgProxy)
+	proxied := newTestApp(t, cfgProxy, Deps{})
 	for range 2 {
 		do(t, proxied, http.MethodGet, "/api/v1/projects", other)
 	}
@@ -151,7 +150,7 @@ func TestRateLimit(t *testing.T) {
 
 func TestMiddleware(t *testing.T) {
 	t.Parallel()
-	app := newTestApp(t, healthyDB, DefaultConfig())
+	app := newTestApp(t, DefaultConfig(), Deps{})
 	app.Get("/api/v1/test-context", func(c fiber.Ctx) error {
 		deadline, ok := c.Context().Deadline()
 		return c.JSON(fiber.Map{"hasDeadline": ok, "inSeconds": time.Until(deadline).Seconds(), "clientIP": ClientIP(c)})

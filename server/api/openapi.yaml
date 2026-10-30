@@ -178,14 +178,12 @@ components:
         - NOT_FOUND
         - METHOD_NOT_ALLOWED
         - RATE_LIMITED
-        - NOT_IMPLEMENTED
         - INTERNAL
       x-enum-varnames: # Go constant names (oapi-codegen)
         - Validation
         - NotFound
         - MethodNotAllowed
         - RateLimited
-        - NotImplemented
         - Internal
 
     Error:

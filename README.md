@@ -15,6 +15,7 @@ docker compose up -d                 # Postgres on 127.0.0.1:5433 (dbs: portfoli
 cd server
 cp .env.example .env
 go run ./cmd/api migrate up          # apply embedded SQL migrations
+go run ./cmd/api seed                # load placeholder projects (safe to re-run)
 go run ./cmd/api                     # http://localhost:4000/api/v1/health
 
 cd ../client
@@ -29,6 +30,7 @@ bun run dev                          # http://localhost:3000
 | `go run ./cmd/api migrate up`             | apply pending migrations                                |
 | `go run ./cmd/api migrate down [n]`       | roll back `n` migrations (default 1)                    |
 | `go run ./cmd/api migrate version`        | show the current schema version                         |
+| `go run ./cmd/api seed`                   | upsert the 5 placeholder projects and their tags (idempotent) |
 | `sqlc generate`                           | regenerate `internal/database/sqlc` from `queries/*.sql` |
 | `go generate ./...`                       | regenerate the Fiber strict server from `api/openapi.yaml` |
 

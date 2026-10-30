@@ -12,10 +12,42 @@ import (
 	"github.com/google/uuid"
 )
 
+const addProjectTags = `-- name: AddProjectTags :exec
+INSERT INTO project_tags (project_id, tag_id)
+SELECT $1, unnest($2::uuid[])
+`
+
+type AddProjectTagsParams struct {
+	ProjectID uuid.UUID
+	TagIDs    []uuid.UUID
+}
+
+func (q *Queries) AddProjectTags(ctx context.Context, arg AddProjectTagsParams) error {
+	_, err := q.db.Exec(ctx, addProjectTags, arg.ProjectID, arg.TagIDs)
+	return err
+}
+
+const deleteProjectTags = `-- name: DeleteProjectTags :exec
+DELETE FROM project_tags WHERE project_id = $1
+`
+
+func (q *Queries) DeleteProjectTags(ctx context.Context, projectID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteProjectTags, projectID)
+	return err
+}
+
 const getPublishedProjectBySlug = `-- name: GetPublishedProjectBySlug :one
-SELECT id, slug, title, summary, body, cover_image_url, repo_url, live_url, featured, updated_at
-FROM projects
-WHERE slug = $1 AND published
+SELECT p.id, p.slug, p.title, p.summary, p.body, p.cover_image_url, p.repo_url, p.live_url,
+       p.featured, p.updated_at,
+       COALESCE(t.tags, '[]'::json) AS tags
+FROM projects p
+LEFT JOIN LATERAL (
+    SELECT json_agg(json_build_object('slug', tg.slug, 'name', tg.name) ORDER BY tg.name) AS tags
+    FROM project_tags pt
+    JOIN tags tg ON tg.id = pt.tag_id
+    WHERE pt.project_id = p.id
+) t ON true
+WHERE p.slug = $1 AND p.published
 `
 
 type GetPublishedProjectBySlugRow struct {
@@ -29,6 +61,7 @@ type GetPublishedProjectBySlugRow struct {
 	LiveURL       *string
 	Featured      bool
 	UpdatedAt     time.Time
+	Tags          []byte
 }
 
 func (q *Queries) GetPublishedProjectBySlug(ctx context.Context, slug string) (GetPublishedProjectBySlugRow, error) {
@@ -45,6 +78,141 @@ func (q *Queries) GetPublishedProjectBySlug(ctx context.Context, slug string) (G
 		&i.LiveURL,
 		&i.Featured,
 		&i.UpdatedAt,
+		&i.Tags,
 	)
 	return i, err
+}
+
+const listPublishedProjects = `-- name: ListPublishedProjects :many
+SELECT p.id, p.slug, p.title, p.summary, p.cover_image_url, p.featured,
+       COALESCE(t.tags, '[]'::json) AS tags
+FROM projects p
+LEFT JOIN LATERAL (
+    SELECT json_agg(json_build_object('slug', tg.slug, 'name', tg.name) ORDER BY tg.name) AS tags
+    FROM project_tags pt
+    JOIN tags tg ON tg.id = pt.tag_id
+    WHERE pt.project_id = p.id
+) t ON true
+WHERE p.published
+  AND ($1::boolean IS NULL OR p.featured = $1)
+  AND ($2::text IS NULL
+       OR p.title   ILIKE '%' || $2 || '%' ESCAPE '\'
+       OR p.summary ILIKE '%' || $2 || '%' ESCAPE '\')
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR p.id IN (
+        -- Intersection: keep projects matching every requested tag.
+        SELECT pt.project_id
+        FROM project_tags pt
+        JOIN tags tg ON tg.id = pt.tag_id
+        WHERE tg.slug = ANY($3::text[])
+        GROUP BY pt.project_id
+        HAVING count(DISTINCT tg.slug) = cardinality($3::text[])))
+ORDER BY p.sort_order, p.created_at DESC
+`
+
+type ListPublishedProjectsParams struct {
+	Featured *bool
+	Search   *string
+	TagSlugs []string
+}
+
+type ListPublishedProjectsRow struct {
+	ID            uuid.UUID
+	Slug          string
+	Title         string
+	Summary       string
+	CoverImageURL *string
+	Featured      bool
+	Tags          []byte
+}
+
+// Published projects that have ALL of @tag_slugs (none = no tag filter), optionally
+// filtered by featured and a search term. @search must already be LIKE-escaped (\ % _).
+func (q *Queries) ListPublishedProjects(ctx context.Context, arg ListPublishedProjectsParams) ([]ListPublishedProjectsRow, error) {
+	rows, err := q.db.Query(ctx, listPublishedProjects, arg.Featured, arg.Search, arg.TagSlugs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPublishedProjectsRow
+	for rows.Next() {
+		var i ListPublishedProjectsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Title,
+			&i.Summary,
+			&i.CoverImageURL,
+			&i.Featured,
+			&i.Tags,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const upsertProject = `-- name: UpsertProject :one
+INSERT INTO projects (slug, title, summary, body, cover_image_url, repo_url, live_url,
+                      featured, published, sort_order)
+VALUES ($1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10)
+ON CONFLICT (slug) DO UPDATE SET
+    title           = EXCLUDED.title,
+    summary         = EXCLUDED.summary,
+    body            = EXCLUDED.body,
+    cover_image_url = EXCLUDED.cover_image_url,
+    repo_url        = EXCLUDED.repo_url,
+    live_url        = EXCLUDED.live_url,
+    featured        = EXCLUDED.featured,
+    published       = EXCLUDED.published,
+    sort_order      = EXCLUDED.sort_order,
+    updated_at      = CASE
+        WHEN (projects.title, projects.summary, projects.body, projects.cover_image_url,
+              projects.repo_url, projects.live_url, projects.featured, projects.published,
+              projects.sort_order)
+             IS DISTINCT FROM
+             (EXCLUDED.title, EXCLUDED.summary, EXCLUDED.body, EXCLUDED.cover_image_url,
+              EXCLUDED.repo_url, EXCLUDED.live_url, EXCLUDED.featured, EXCLUDED.published,
+              EXCLUDED.sort_order)
+        THEN now()
+        ELSE projects.updated_at
+    END
+RETURNING id
+`
+
+type UpsertProjectParams struct {
+	Slug          string
+	Title         string
+	Summary       string
+	Body          string
+	CoverImageURL *string
+	RepoURL       *string
+	LiveURL       *string
+	Featured      bool
+	Published     bool
+	SortOrder     int32
+}
+
+// Insert or update by slug. updated_at only moves when the content actually changes,
+// so re-running the seed is a no-op.
+func (q *Queries) UpsertProject(ctx context.Context, arg UpsertProjectParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, upsertProject,
+		arg.Slug,
+		arg.Title,
+		arg.Summary,
+		arg.Body,
+		arg.CoverImageURL,
+		arg.RepoURL,
+		arg.LiveURL,
+		arg.Featured,
+		arg.Published,
+		arg.SortOrder,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

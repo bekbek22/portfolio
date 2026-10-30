@@ -46,7 +46,7 @@ func TestHealth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			app := newTestApp(t, tt.ping, DefaultConfig())
+			app := newTestApp(t, DefaultConfig(), Deps{DB: tt.ping})
 
 			res := do(t, app, http.MethodGet, "/api/v1/health", nil)
 

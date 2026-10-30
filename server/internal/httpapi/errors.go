@@ -10,12 +10,8 @@ import (
 	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
 )
 
-// Sentinel errors handlers return; errorHandler maps them to HTTP responses.
-var (
-	ErrNotFound       = errors.New("resource not found")
-	ErrNotImplemented = errors.New("not implemented")
-	errRateLimited    = errors.New("rate limit exceeded")
-)
+// errRateLimited is returned by the limiter; errorHandler maps it to 429.
+var errRateLimited = errors.New("rate limit exceeded")
 
 // errorHandler renders every error as the API's Error envelope. Unexpected errors are
 // logged with their detail and returned as a generic 500 so internals never leak.
@@ -42,10 +38,6 @@ func toErrorDetail(err error) (int, gen.ErrorDetail) {
 		return http.StatusUnprocessableEntity, gen.ErrorDetail{
 			Code: gen.ErrorCodeValidation, Message: "Invalid request", FieldErrors: &vErr.fieldErrors,
 		}
-	case errors.Is(err, ErrNotFound):
-		return http.StatusNotFound, gen.ErrorDetail{Code: gen.ErrorCodeNotFound, Message: "Resource not found"}
-	case errors.Is(err, ErrNotImplemented):
-		return http.StatusNotImplemented, gen.ErrorDetail{Code: gen.ErrorCodeNotImplemented, Message: "Not implemented yet"}
 	case errors.Is(err, errRateLimited):
 		return http.StatusTooManyRequests, gen.ErrorDetail{Code: gen.ErrorCodeRateLimited, Message: "Too many requests, try again later"}
 	case errors.As(err, &fErr):

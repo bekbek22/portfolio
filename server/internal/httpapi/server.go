@@ -19,8 +19,9 @@ import (
 const basePath = "/api/v1"
 
 type Deps struct {
-	DB     Pinger
-	Logger *slog.Logger
+	DB       Pinger
+	Projects ProjectService
+	Logger   *slog.Logger
 }
 
 type Config struct {
@@ -86,7 +87,7 @@ func New(deps Deps, cfg Config) (*fiber.App, error) {
 		validate,
 	)
 	v1.Get("/openapi.json", func(c fiber.Ctx) error { return c.JSON(spec) })
-	gen.RegisterHandlers(v1, gen.NewStrictHandler(&handlers{db: deps.DB}, nil))
+	gen.RegisterHandlers(v1, gen.NewStrictHandler(&handlers{db: deps.DB, projects: deps.Projects}, nil))
 
 	return app, nil
 }

@@ -6,6 +6,7 @@
 //	api healthcheck  exit 0 if the local server reports healthy (for container HEALTHCHECK)
 //	api migrate up | down [n] | version
 //	                 apply, roll back (default 1 step) or inspect the embedded SQL migrations
+//	api seed         load the placeholder projects and tags (safe to re-run)
 package main
 
 import (
@@ -26,7 +27,10 @@ import (
 
 	"github.com/bekbek101/portfolio/server/internal/config"
 	"github.com/bekbek101/portfolio/server/internal/database"
+	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
 	"github.com/bekbek101/portfolio/server/internal/httpapi"
+	"github.com/bekbek101/portfolio/server/internal/project"
+	"github.com/bekbek101/portfolio/server/internal/seed"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -64,8 +68,10 @@ func run(ctx context.Context, args []string, getenv func(string) string) error {
 		return healthcheck(ctx, cfg.Port)
 	case "migrate":
 		return runMigrate(cfg.DatabaseURL, args[1:])
+	case "seed":
+		return runSeed(ctx, cfg.DatabaseURL)
 	default:
-		return fmt.Errorf("unknown command %q (want: serve, healthcheck, migrate)", cmd)
+		return fmt.Errorf("unknown command %q (want: serve, healthcheck, migrate, seed)", cmd)
 	}
 }
 
@@ -85,7 +91,11 @@ func serve(ctx context.Context, cfg config.Config, log *slog.Logger) error {
 
 	httpCfg := httpapi.DefaultConfig()
 	httpCfg.TrustedProxyHops = cfg.TrustedProxyHops
-	app, err := httpapi.New(httpapi.Deps{DB: pool, Logger: log}, httpCfg)
+	app, err := httpapi.New(httpapi.Deps{
+		DB:       pool,
+		Projects: project.NewService(sqlc.New(pool)),
+		Logger:   log,
+	}, httpCfg)
 	if err != nil {
 		return err
 	}
@@ -168,5 +178,19 @@ func runMigrate(databaseURL string, args []string) (err error) {
 		return fmt.Errorf("read migration version: %w", err)
 	}
 	fmt.Printf("schema version: %d (dirty: %t)\n", version, dirty)
+	return nil
+}
+
+func runSeed(ctx context.Context, databaseURL string) error {
+	pool, err := database.NewPool(ctx, databaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	if err := seed.Run(ctx, pool); err != nil {
+		return err
+	}
+	fmt.Println("seed complete")
 	return nil
 }

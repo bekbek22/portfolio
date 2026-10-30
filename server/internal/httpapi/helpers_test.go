@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+
+	"github.com/bekbek101/portfolio/server/internal/project"
 )
 
 type fakePinger func(ctx context.Context) error
@@ -17,9 +19,46 @@ func (f fakePinger) Ping(ctx context.Context) error { return f(ctx) }
 
 func healthyDB(context.Context) error { return nil }
 
-func newTestApp(t *testing.T, db fakePinger, cfg Config) *fiber.App {
+// fakeProjects implements ProjectService; unset funcs return empty results.
+type fakeProjects struct {
+	list func(context.Context, project.Filter) ([]project.Card, error)
+	get  func(context.Context, string) (project.Detail, error)
+	tags func(context.Context) ([]project.TagCount, error)
+}
+
+func (f fakeProjects) List(ctx context.Context, flt project.Filter) ([]project.Card, error) {
+	if f.list == nil {
+		return nil, nil
+	}
+	return f.list(ctx, flt)
+}
+
+func (f fakeProjects) Get(ctx context.Context, slug string) (project.Detail, error) {
+	if f.get == nil {
+		return project.Detail{}, project.ErrNotFound
+	}
+	return f.get(ctx, slug)
+}
+
+func (f fakeProjects) Tags(ctx context.Context) ([]project.TagCount, error) {
+	if f.tags == nil {
+		return nil, nil
+	}
+	return f.tags(ctx)
+}
+
+// newTestApp builds the app with a healthy fake DB and empty fake projects unless
+// deps overrides them.
+func newTestApp(t *testing.T, cfg Config, deps Deps) *fiber.App {
 	t.Helper()
-	app, err := New(Deps{DB: db, Logger: slog.New(slog.DiscardHandler)}, cfg)
+	if deps.DB == nil {
+		deps.DB = fakePinger(healthyDB)
+	}
+	if deps.Projects == nil {
+		deps.Projects = fakeProjects{}
+	}
+	deps.Logger = slog.New(slog.DiscardHandler)
+	app, err := New(deps, cfg)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
