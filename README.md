@@ -19,8 +19,9 @@ go run ./cmd/api seed                # load placeholder projects (safe to re-run
 go run ./cmd/api                     # http://localhost:4000/api/v1/health
 
 cd ../client
+cp .env.example .env                 # API_URL=http://localhost:4000
 bun install
-bun run dev                          # http://localhost:3000
+bun run dev                          # http://localhost:3000 (needs the API running)
 ```
 
 ## Server
@@ -56,3 +57,17 @@ https://github.com/sqlc-dev/sqlc/releases/tag/v1.31.1 (building from source need
 
 **Image:** `docker build -t portfolio-server server` — distroless, non-root, ~16 MB.
 Migrations are embedded: run `/api migrate up` as the pre-deploy command.
+
+## Client
+
+| Command              | What                                                               |
+| -------------------- | ------------------------------------------------------------------ |
+| `bun run dev`        | dev server; `/api/*` is forwarded to `API_URL`                     |
+| `bun run build`      | production build; prerenders pages from the API, so it must be up  |
+| `bun run test`       | unit tests (`bun test`)                                             |
+| `bun run test:e2e`   | Playwright smoke tests against a production build + seeded API    |
+| `bun run gen:api`    | regenerate `src/lib/api/schema.d.ts` from `server/api/openapi.yaml` |
+
+Pages read data in Server Components through a typed `openapi-fetch` client, cached with
+`"use cache"` + `cacheTag("projects")`. Project filters live in the URL
+(`/projects?tag=go&tag=postgresql`), so every filtered view is a shareable link.
