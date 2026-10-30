@@ -4,6 +4,8 @@
 //
 //	api [serve]      start the HTTP server (default)
 //	api healthcheck  exit 0 if the local server reports healthy (for container HEALTHCHECK)
+//	api migrate up | down [n] | version
+//	                 apply, roll back (default 1 step) or inspect the embedded SQL migrations
 package main
 
 import (
@@ -15,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -59,8 +62,10 @@ func run(ctx context.Context, args []string, getenv func(string) string) error {
 		return serve(ctx, cfg, newLogger(cfg.Env))
 	case "healthcheck":
 		return healthcheck(ctx, cfg.Port)
+	case "migrate":
+		return runMigrate(cfg.DatabaseURL, args[1:])
 	default:
-		return fmt.Errorf("unknown command %q (want: serve, healthcheck)", cmd)
+		return fmt.Errorf("unknown command %q (want: serve, healthcheck, migrate)", cmd)
 	}
 }
 
@@ -120,5 +125,43 @@ func healthcheck(ctx context.Context, port int) error {
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("healthcheck: status %d", res.StatusCode)
 	}
+	return nil
+}
+
+func runMigrate(databaseURL string, args []string) (err error) {
+	if len(args) == 0 {
+		return errors.New("usage: api migrate up | down [n] | version")
+	}
+
+	mg, err := database.NewMigrator(databaseURL)
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, mg.Close()) }()
+
+	switch args[0] {
+	case "up":
+		err = mg.Up()
+	case "down":
+		steps := 1
+		if len(args) > 1 {
+			if steps, err = strconv.Atoi(args[1]); err != nil {
+				return fmt.Errorf("migrate down: invalid step count %q", args[1])
+			}
+		}
+		err = mg.Down(steps)
+	case "version":
+	default:
+		return fmt.Errorf("unknown migrate command %q (want: up, down, version)", args[0])
+	}
+	if err != nil {
+		return err
+	}
+
+	version, dirty, err := mg.Version()
+	if err != nil {
+		return fmt.Errorf("read migration version: %w", err)
+	}
+	fmt.Printf("schema version: %d (dirty: %t)\n", version, dirty)
 	return nil
 }
