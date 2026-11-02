@@ -13,7 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 
-	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
+	"github.com/bekbek22/portfolio/server/internal/httpapi/gen"
 )
 
 const basePath = "/api/v1"

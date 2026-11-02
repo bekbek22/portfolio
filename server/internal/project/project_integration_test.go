@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
-	"github.com/bekbek101/portfolio/server/internal/database/testdb"
-	"github.com/bekbek101/portfolio/server/internal/project"
+	"github.com/bekbek22/portfolio/server/internal/database/sqlc"
+	"github.com/bekbek22/portfolio/server/internal/database/testdb"
+	"github.com/bekbek22/portfolio/server/internal/project"
 )
 
 type fixture struct {

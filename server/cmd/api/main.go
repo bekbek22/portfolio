@@ -25,12 +25,12 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/joho/godotenv"
 
-	"github.com/bekbek101/portfolio/server/internal/config"
-	"github.com/bekbek101/portfolio/server/internal/database"
-	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
-	"github.com/bekbek101/portfolio/server/internal/httpapi"
-	"github.com/bekbek101/portfolio/server/internal/project"
-	"github.com/bekbek101/portfolio/server/internal/seed"
+	"github.com/bekbek22/portfolio/server/internal/config"
+	"github.com/bekbek22/portfolio/server/internal/database"
+	"github.com/bekbek22/portfolio/server/internal/database/sqlc"
+	"github.com/bekbek22/portfolio/server/internal/httpapi"
+	"github.com/bekbek22/portfolio/server/internal/project"
+	"github.com/bekbek22/portfolio/server/internal/seed"
 )
 
 const shutdownTimeout = 10 * time.Second

@@ -1,6 +1,6 @@
 package seed
 
-import "github.com/bekbek101/portfolio/server/internal/database/sqlc"
+import "github.com/bekbek22/portfolio/server/internal/database/sqlc"
 
 // Placeholder content based on the owner's real work. Repo/live URLs are deliberately
 // nil so no invented links are published; fill them in once the repos are public.

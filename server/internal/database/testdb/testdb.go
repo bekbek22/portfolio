@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/bekbek101/portfolio/server/internal/database"
+	"github.com/bekbek22/portfolio/server/internal/database"
 )
 
 const envVar = "TEST_DATABASE_URL"

@@ -9,8 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
-	"github.com/bekbek101/portfolio/server/internal/database/testdb"
+	"github.com/bekbek22/portfolio/server/internal/database/sqlc"
+	"github.com/bekbek22/portfolio/server/internal/database/testdb"
 )
 
 // The schema enforces its own invariants; these writes must be rejected by Postgres itself.

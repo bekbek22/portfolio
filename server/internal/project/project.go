@@ -13,7 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
+	"github.com/bekbek22/portfolio/server/internal/database/sqlc"
 )
 
 var ErrNotFound = errors.New("project not found")

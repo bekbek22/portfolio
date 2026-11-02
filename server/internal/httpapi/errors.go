@@ -7,7 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
+	"github.com/bekbek22/portfolio/server/internal/httpapi/gen"
 )
 
 // errRateLimited is returned by the limiter; errorHandler maps it to 429.

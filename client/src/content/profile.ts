@@ -5,7 +5,7 @@ export const profile = {
   nameLocal: "คุณ",
   headline:
     "Backend & Software Engineer specializing in Microservices, Go, ElysiaJS, and Cloud Architecture.",
-  githubUrl: "https://github.com/bekbek101",
+  githubUrl: "https://github.com/bekbek22",
   email: "contact@bekbek101.dev",
   linkedinUrl: undefined as string | undefined,
   resumeUrl: undefined as string | undefined, // e.g. "/resume.pdf" once added to public/

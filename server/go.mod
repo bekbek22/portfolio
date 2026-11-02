@@ -1,4 +1,4 @@
-module github.com/bekbek101/portfolio/server
+module github.com/bekbek22/portfolio/server
 
 go 1.27
 

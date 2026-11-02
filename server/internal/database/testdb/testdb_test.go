@@ -3,7 +3,7 @@ package testdb_test
 import (
 	"testing"
 
-	"github.com/bekbek101/portfolio/server/internal/database/testdb"
+	"github.com/bekbek22/portfolio/server/internal/database/testdb"
 )
 
 const probeSlug = "testdb-isolation-probe"

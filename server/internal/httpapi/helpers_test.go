@@ -10,7 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/bekbek101/portfolio/server/internal/project"
+	"github.com/bekbek22/portfolio/server/internal/project"
 )
 
 type fakePinger func(ctx context.Context) error

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
-	"github.com/bekbek101/portfolio/server/internal/project"
+	"github.com/bekbek22/portfolio/server/internal/httpapi/gen"
+	"github.com/bekbek22/portfolio/server/internal/project"
 )
 
 // Pinger is the slice of the database pool the health check needs.

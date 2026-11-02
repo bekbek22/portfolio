@@ -7,10 +7,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
-	"github.com/bekbek101/portfolio/server/internal/database/testdb"
-	"github.com/bekbek101/portfolio/server/internal/project"
-	"github.com/bekbek101/portfolio/server/internal/seed"
+	"github.com/bekbek22/portfolio/server/internal/database/sqlc"
+	"github.com/bekbek22/portfolio/server/internal/database/testdb"
+	"github.com/bekbek22/portfolio/server/internal/project"
+	"github.com/bekbek22/portfolio/server/internal/seed"
 )
 
 type counts struct{ projects, tags, links int }

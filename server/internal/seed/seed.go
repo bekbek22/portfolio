@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/bekbek101/portfolio/server/internal/database/sqlc"
+	"github.com/bekbek22/portfolio/server/internal/database/sqlc"
 )
 
 // TxBeginner is satisfied by *pgxpool.Pool and by pgx.Tx (which nests via a savepoint).

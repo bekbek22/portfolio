@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
-	"github.com/bekbek101/portfolio/server/internal/project"
+	"github.com/bekbek22/portfolio/server/internal/httpapi/gen"
+	"github.com/bekbek22/portfolio/server/internal/project"
 )
 
 func ptr[T any](v T) *T { return &v }

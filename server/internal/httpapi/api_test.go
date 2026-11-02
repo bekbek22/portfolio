@@ -9,7 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
+	"github.com/bekbek22/portfolio/server/internal/httpapi/gen"
 )
 
 func TestRequestValidation(t *testing.T) {

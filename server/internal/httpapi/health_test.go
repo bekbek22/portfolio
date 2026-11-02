@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/bekbek101/portfolio/server/internal/httpapi/gen"
+	"github.com/bekbek22/portfolio/server/internal/httpapi/gen"
 )
 
 func TestHealth(t *testing.T) {
