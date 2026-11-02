@@ -55,7 +55,7 @@ missing `TEST_DATABASE_URL` fails the build instead.
 **sqlc** is pinned to **v1.31.1** (CI and `sqlc.yaml`). Install the release binary from
 https://github.com/sqlc-dev/sqlc/releases/tag/v1.31.1 (building from source needs cgo).
 
-**Image:** `docker build -t portfolio-server server` — distroless, non-root, ~16 MB.
+**Image:** `docker build -t portfolio-server server` — distroless, non-root, ~18 MB.
 Migrations are embedded: run `/api migrate up` as the pre-deploy command.
 
 ## Client
@@ -71,3 +71,21 @@ Migrations are embedded: run `/api migrate up` as the pre-deploy command.
 Pages read data in Server Components through a typed `openapi-fetch` client, cached with
 `"use cache"` + `cacheTag("projects")`. Project filters live in the URL
 (`/projects?tag=go&tag=postgresql`), so every filtered view is a shareable link.
+
+## Deployment
+
+Neon (Postgres), Railway (`server/`) and Vercel (`client/`), all in Singapore. Deploy in that
+order: `next build` prerenders pages from the API, so it must be live and seeded first.
+
+| Service | Setting            | Value                                        |
+| ------- | ------------------ | -------------------------------------------- |
+| Railway | Root Directory     | `server`                                     |
+| Railway | Pre-deploy command | `/api migrate up`                            |
+| Railway | Healthcheck path   | `/api/v1/health`                             |
+| Railway | Variables          | `APP_ENV=production`, `PORT=4000`, `DATABASE_URL` (Neon direct, not `-pooler`), `TRUSTED_PROXY_HOPS` |
+| Vercel  | Root Directory     | `client`                                     |
+| Vercel  | Function region    | `sin1`                                       |
+| Vercel  | Variables          | `API_URL` (Railway URL, no trailing slash)   |
+
+The image has no shell, so `seed` runs from a machine with the repo: set `DATABASE_URL` to the
+Neon URL, then `go run ./cmd/api seed`.

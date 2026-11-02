@@ -6,11 +6,10 @@ FROM golang:1.27.3-alpine AS build
 WORKDIR /src
 
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN go mod download
 
 COPY . .
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 
 # ── runtime: distroless (no shell, no package manager), non-root ──────────────
 FROM gcr.io/distroless/static-debian13:nonroot
@@ -23,5 +22,5 @@ USER nonroot:nonroot
 # No shell or curl in distroless: the binary checks itself.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD ["/api", "healthcheck"]
 
-ENTRYPOINT ["/api"]
-CMD ["serve"]
+# CMD, not ENTRYPOINT: platforms can run `/api migrate up` as a one-off command in this image.
+CMD ["/api", "serve"]
